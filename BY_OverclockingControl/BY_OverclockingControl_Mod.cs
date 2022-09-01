@@ -4,11 +4,15 @@ namespace BuYanMod.OverclockingControl
     using BuYanMod.OverclockingControl.ModSystem;
     using ProtoBuf;
     using Sandbox.Common.ObjectBuilders;
+    using Sandbox.Game;
+    using Sandbox.Game.World;
     using Sandbox.ModAPI;
     using Sandbox.ModAPI.Interfaces.Terminal;
     using System;
     using System.Collections.Generic;
+    using System.Text;
     using VRage;
+    using VRage.Game;
     using VRage.Game.Components;
     using VRage.Game.ModAPI;
     using VRage.ModAPI;
@@ -335,6 +339,7 @@ namespace BuYanMod.OverclockingControl
             arg2.Append("\n" + mt.Gyro + " :   " + Math.Round(Gyro, 2) + "  " + mt.Times);
             arg2.Append("\n" + mt.Thrust + " :   " + Math.Round(Thrust, 2) + "  " + mt.Times);
             arg2.Append("\n" + mt.Drill + " :   " + Math.Round(Drill,2) +"  "+mt.Times);
+            
         }
         /// <summary>
         ///获取控制台界面
