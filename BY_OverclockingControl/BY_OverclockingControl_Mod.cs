@@ -44,7 +44,7 @@ namespace BuYanMod.OverclockingControl
         private static List<IMySlimBlock> GridBlocks = new List<IMySlimBlock>();         //临时网格块存储列表
         protected IMyProgrammableBlock Block => Entity as IMyProgrammableBlock;         //获取实体块
         static bool controlIsCreated = false;                                           //是否初始化控件
-        //static bool ThreadLock = false;                                                 //线程锁
+        static bool ThreadLock = false;                                                 //线程锁
         
         //方块数据
         public float Reactor { get; protected set; } = 1;
@@ -174,7 +174,7 @@ namespace BuYanMod.OverclockingControl
             }
             BuildControl();              //建立控件
             LoadConfig();                //加载配置
-            UpdateData();           //加载方块设置信息更新网格
+            IsEnable();           //加载方块设置信息更新网格
             Block.AppendingCustomInfo += Block_AppendingCustomInfo;//事件:方块终端右下角信息更新
             MyAPIGateway.TerminalControls.CustomControlGetter += AdjustTerminalControls_controls;//事件: 显示终端前更新终端
             MyAPIGateway.TerminalControls.CustomActionGetter += AdjustTerminalControls_Action;//事件: 显示G键功能前更新动作
@@ -186,22 +186,47 @@ namespace BuYanMod.OverclockingControl
         public sealed override void UpdateBeforeSimulation10()
         {
             base.UpdateBeforeSimulation10();
+            if (!ThreadLock) { MyAPIGateway.Parallel.StartBackground(IsEnable); ThreadLock = true; }
             Block.RefreshCustomInfo();   //触发更新块控制台(右下角)的信息的方法
         }
-
+        private void IsEnable() {
+            List<IMySlimBlock> blocks = new List<IMySlimBlock>();
+            List<IMyProgrammableBlock> Pbs = new List<IMyProgrammableBlock>();
+            Block.CubeGrid.GetBlocks(blocks, (b) => { if (b.BlockDefinition.Id.SubtypeName.Contains(sID)) return true; return false; });
+            if (blocks.Count > 1)
+            {
+                int on = 0;
+                int a = 0;
+                foreach (IMySlimBlock block in blocks)
+                {
+                    IMyProgrammableBlock b = (IMyProgrammableBlock)block.FatBlock;
+                    if (b.Enabled) { UpdateData(); on++;}
+                    a++;
+                    if(a==blocks.Count&&on==0) Overclock.Clear(b.CubeGrid);
+                }
+            }
+            else {
+                if (Block.Enabled) UpdateData();
+                if (!Block.Enabled) Overclock.Clear(Block.CubeGrid);
+            }
+            ThreadLock = false;
+        }
 
         //网格添加块时调用
         private void CubeGrid_OnBlockAdded(IMySlimBlock obj)
         {
-            if (obj.FatBlock is IMyReactor) Overclock.Reactor((IMyTerminalBlock)obj.FatBlock, Reactor, false);
-            if (obj.FatBlock is IMyGasGenerator) Overclock.GasGenerator((IMyTerminalBlock)obj.FatBlock, GasGenerator, false);
-            if (obj.FatBlock is IMyGyro) Overclock.Gyro((IMyTerminalBlock)obj.FatBlock, Gyro, false);
-            if (obj.FatBlock is IMyThrust) Overclock.Thrust((IMyTerminalBlock)obj.FatBlock, Thrust, false);
-            if (obj.FatBlock is IMyShipDrill) Overclock.Drill((IMyTerminalBlock)obj.FatBlock, Drill, false);
-            if (obj.BlockDefinition.Id.SubtypeName.Contains(sID)) {Sunchronize((IMyTerminalBlock)obj.FatBlock,false);}
+            if (Block.Enabled)
+            {
+                if (obj.FatBlock is IMyReactor) Overclock.Reactor((IMyTerminalBlock)obj.FatBlock, Reactor, false);
+                if (obj.FatBlock is IMyGasGenerator) Overclock.GasGenerator((IMyTerminalBlock)obj.FatBlock, GasGenerator, false);
+                if (obj.FatBlock is IMyGyro) Overclock.Gyro((IMyTerminalBlock)obj.FatBlock, Gyro, false);
+                if (obj.FatBlock is IMyThrust) Overclock.Thrust((IMyTerminalBlock)obj.FatBlock, Thrust, false);
+                if (obj.FatBlock is IMyShipDrill) Overclock.Drill((IMyTerminalBlock)obj.FatBlock, Drill, false);
+            }
+            if (obj.BlockDefinition.Id.SubtypeName.Contains(sID)) { Sunchronize((IMyTerminalBlock)obj.FatBlock, false); }
         }
         //网格合并时调用
-        private void CubeGrid_OnGridMerge(IMyCubeGrid arg1, IMyCubeGrid arg2) { UpdateData(); }
+        private void CubeGrid_OnGridMerge(IMyCubeGrid arg1, IMyCubeGrid arg2) { IsEnable(); }
         //网格拆分时调用
         private void CubeGrid_OnGridSplit(IMyCubeGrid arg1, IMyCubeGrid arg2)
         {
@@ -228,27 +253,27 @@ namespace BuYanMod.OverclockingControl
             //滑块-反应堆
             TerminalRevise.CreateSlider<IMyProgrammableBlock>("BY-", "Slider-反应堆", mt.Reactor, BlockConfirm, BlockConfirm,
                 (Me) => { var logic = GetTerminal(Me); if (logic.Item1) return logic.Item2.Reactor; return 1; },
-                (Me, value) => { var logic = GetTerminal(Me); if (!logic.Item1) return; logic.Item2.Reactor = value; Overclock.Reactor(Me, value, true); logic.Item2.SaveConfig(); Sunchronize(Me, true); },
+                (Me, value) => { var logic = GetTerminal(Me); if (!logic.Item1) return; logic.Item2.Reactor = value;if (logic.Item2.Block.Enabled) Overclock.Reactor(Me, value, true); logic.Item2.SaveConfig(); Sunchronize(Me, true); },
                 (Me, value) => { var logic = GetTerminal(Me); value.Append(logic.Item2.Reactor + " "+ mt.Times); }, 1, 10, 1, TerminalRevise.SliderStyle.Log);
             //滑块-气体发生器
             TerminalRevise.CreateSlider<IMyProgrammableBlock>("BY-", "Slider-气体发生器", mt.GasGenerator, BlockConfirm, BlockConfirm,
                 (Me) => { var logic = GetTerminal(Me); if (logic.Item1) return logic.Item2.GasGenerator; return 1; },
-                (Me, value) => { var logic = GetTerminal(Me); if (!logic.Item1) return; logic.Item2.GasGenerator = value; Overclock.GasGenerator(Me, value, true); logic.Item2.SaveConfig(); Sunchronize(Me, true); },
+                (Me, value) => { var logic = GetTerminal(Me); if (!logic.Item1) return; logic.Item2.GasGenerator = value; if (logic.Item2.Block.Enabled) Overclock.GasGenerator(Me, value, true); logic.Item2.SaveConfig(); Sunchronize(Me, true); },
                 (Me, value) => { var logic = GetTerminal(Me); value.Append(logic.Item2.GasGenerator + " " + mt.Times); }, 1, 10, 1, TerminalRevise.SliderStyle.Log);
             //滑块-陀螺仪
             TerminalRevise.CreateSlider<IMyProgrammableBlock>("BY-", "Slider-陀螺仪", mt.Gyro, BlockConfirm, BlockConfirm,
                 (Me) => { var logic = GetTerminal(Me); if (logic.Item1) return logic.Item2.Gyro; return 1; },
-                (Me, value) => { var logic = GetTerminal(Me); if (!logic.Item1) return; logic.Item2.Gyro = value; Overclock.Gyro(Me, value, true); logic.Item2.SaveConfig(); Sunchronize(Me, true); },
+                (Me, value) => { var logic = GetTerminal(Me); if (!logic.Item1) return; logic.Item2.Gyro = value; if (logic.Item2.Block.Enabled) Overclock.Gyro(Me, value, true); logic.Item2.SaveConfig(); Sunchronize(Me, true); },
                 (Me, value) => { var logic = GetTerminal(Me); value.Append(logic.Item2.Gyro + " " + mt.Times); }, 1, 10, 1, TerminalRevise.SliderStyle.Log);
             //滑块-推进器
             TerminalRevise.CreateSlider<IMyProgrammableBlock>("BY-", "Slider-推进器", mt.Thrust, BlockConfirm, BlockConfirm,
                 (Me) => { var logic = GetTerminal(Me); if (logic.Item1) return logic.Item2.Thrust; return 1; },
-                (Me, value) => { var logic = GetTerminal(Me); if (!logic.Item1) return; logic.Item2.Thrust = value; Overclock.Thrust(Me, value,true); logic.Item2.SaveConfig(); Sunchronize(Me, true); },
+                (Me, value) => { var logic = GetTerminal(Me); if (!logic.Item1) return; logic.Item2.Thrust = value; if (logic.Item2.Block.Enabled) Overclock.Thrust(Me, value,true); logic.Item2.SaveConfig(); Sunchronize(Me, true); },
                 (Me, value) => { var logic = GetTerminal(Me); value.Append(logic.Item2.Thrust + " " + mt.Times); }, 1, 10, 1, TerminalRevise.SliderStyle.Log);
             //滑块-钻头
             TerminalRevise.CreateSlider<IMyProgrammableBlock>("BY-", "Slider-钻头", mt.Drill, BlockConfirm, BlockConfirm,
                 (Me) => { var logic = GetTerminal(Me); if (logic.Item1) return logic.Item2.Drill; return 1; },
-                (Me, value) => { var logic = GetTerminal(Me); if (!logic.Item1) return; logic.Item2.Drill = value; Overclock.Drill(Me, value, true); logic.Item2.SaveConfig(); Sunchronize(Me,true); },
+                (Me, value) => { var logic = GetTerminal(Me); if (!logic.Item1) return; logic.Item2.Drill = value; if (logic.Item2.Block.Enabled) Overclock.Drill(Me, value, true); logic.Item2.SaveConfig(); Sunchronize(Me,true); },
                 (Me, value) => { var logic = GetTerminal(Me); value.Append(logic.Item2.Drill + " " + mt.Times); }, 1, 10, 1, TerminalRevise.SliderStyle.Log);
 
             controlIsCreated = true;
@@ -339,7 +364,9 @@ namespace BuYanMod.OverclockingControl
             arg2.Append("\n" + mt.Gyro + " :   " + Math.Round(Gyro, 2) + "  " + mt.Times);
             arg2.Append("\n" + mt.Thrust + " :   " + Math.Round(Thrust, 2) + "  " + mt.Times);
             arg2.Append("\n" + mt.Drill + " :   " + Math.Round(Drill,2) +"  "+mt.Times);
-            
+            TerminalRevise.RefreshBlockTerminal(block);
+
+
         }
         /// <summary>
         ///获取控制台界面
