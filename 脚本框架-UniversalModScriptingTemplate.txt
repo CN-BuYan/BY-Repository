@@ -1,0 +1,168 @@
+其他信息
+using Sandbox.Game.GameSystems.TextSurfaceScripts;
+using Sandbox.ModAPI;
+using VRage.Game.GUI.TextPanel;
+using VRage.Game.ModAPI;
+using VRageMath;
+
+using Sandbox.Common;
+using Sandbox.Common.ObjectBuilders;
+using Sandbox.Game.EntityComponents;
+using VRage.Game.Components;
+using VRage.ModAPI;
+using VRage.ObjectBuilders;
+using VRage.Utils;
+
+using Sandbox.Definitions;
+using Sandbox.Game.Entities;
+using Sandbox.Game.Lights;
+
+using Sandbox.ModAPI.Weapons;
+
+using Sandbox.ModAPI.Interfaces;
+using VRage.Game;
+using VRage.Game.Entity;
+
+And here is a list of DLLs to add as dependencies/references:
+VRage.Library.dll
+VRage.Network.dll
+VRage.Game.XmlSerializers.dll
+VRage.dll
+VRage.Math.dll
+VRage.Game.dll
+
+Sandbox.Common.dll
+SpaceEngineers.ObjectBuilders.dll
+Sandbox.Game.dll
+
+HavokWrapper.dll
+
+其他信息
+
+
+
+
+using Sandbox.Common.ObjectBuilders;
+using Sandbox.Definitions;
+using Sandbox.Game.Entities;
+using Sandbox.Game.Entities.Cube;
+using Sandbox.Game.EntityComponents;
+using Sandbox.ModAPI;
+using Sandbox.ModAPI.Interfaces.Terminal;
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using VRage;
+using VRage.Game;
+using VRage.Game.Components;
+using VRage.Game.Entity;
+using VRage.Game.ModAPI;
+using VRage.ModAPI;
+using VRage.ObjectBuilders;
+using VRage.Utils;
+using VRageMath;
+
+namespace ScriptingTemplate///命名空间
+{
+	
+///自定义方块脚本类
+	
+///将BlockType替换成需要使用此脚本的方块类型(如Thrust,LCDPanelsBlock等),将BlockSubType替换成需要使用此脚本的方块子类,支持同时挂载多个方块子类
+    [MyEntityComponentDescriptor(typeof(MyObjectBuilder_BlockType), true, "BlockSubType1","BlockSubType2")]
+    public class ScriptedBlockTemplate : MyGameLogicComponent
+    {
+	///在此处定义公共变量
+        public int ExampleVar1 = 10;
+
+
+        public sealed override void Init(MyObjectBuilder_EntityBase objectBuilder)///初始化部分
+        {
+            base.Init(objectBuilder);
+            try
+            {
+		///初始化时方块运行的脚本
+            }
+            catch (Exception) { }
+            NeedsUpdate |= MyEntityUpdateEnum.EACH_FRAME | MyEntityUpdateEnum.EACH_100TH_FRAME | MyEntityUpdateEnum.EACH_10TH_FRAME;
+        }
+
+        public sealed override void UpdateBeforeSimulation()///自动刷新时(每1/60秒)运行
+        {
+            try
+            {
+		///在此处写脚本
+		
+				//示例脚本
+                var Block = (Entity as Sandbox.ModAPI.IMyFunctionalBlock);//获取方块,Sandbox.ModAPI.IMyFunctionalBlock可换成其他方块类型,获取完成后Block可作为单个实例化的方块使用
+                if (Block == null || !Block.Enabled || !Block.IsFunctional) return;//检测方块是否已损坏,若方块损坏则不执行下面的代码
+				if (!Block.Enabled) Block.Enabled = true;//若方块关闭则自动将其开启
+				
+            }
+            catch (Exception) { }
+        }
+        public sealed override void UpdateAfterSimulation()///自动刷新(每1/60秒)后运行
+        {
+            base.UpdateAfterSimulation();
+            try
+            {
+		///在此处写脚本
+            }
+            catch (Exception) { }
+        }
+        public sealed override void UpdateBeforeSimulation10()///自动刷新时(每1/6秒)运行
+        {
+            base.UpdateBeforeSimulation10();
+            try
+            {
+		///在此处写脚本
+            }
+            catch (Exception) { }
+        }
+        public sealed override void UpdateBeforeSimulation100()///自动刷新时(每10/6秒)运行
+        {
+
+            base.UpdateBeforeSimulation100();
+            try
+            {
+		///在此处写脚本
+            }
+            catch (Exception) { }
+        }
+
+    }
+	
+///自定义全局逻辑服务类
+	
+  [MySessionComponentDescriptor(MyUpdateOrder.BeforeSimulation)]
+    public partial class GlobalLogicTemplate : MySessionComponentBase
+    {
+		///在此处定义公共变量
+        public static bool ExampleVar2;
+		
+        public override void UpdateBeforeSimulation()///自动刷新时(每1/60秒)运行
+        {
+            base.UpdateBeforeSimulation();
+            try
+            { 
+		///在此处写脚本
+				if (!Initialized) return;
+				//示例脚本
+				MyAPIGateway.Utilities.ShowNotification("Hello SE!", 1);//在屏幕上显示文本
+            }
+            catch (Exception) { }
+        }
+
+        protected override void UnloadData()///退出世界时运行
+        {
+            base.UnloadData();
+        }
+        public override void SaveData()///保存时运行
+        {
+            base.SaveData();
+        }
+    }
+
+	
+}
